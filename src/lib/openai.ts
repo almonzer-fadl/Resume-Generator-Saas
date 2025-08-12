@@ -1,12 +1,15 @@
 import OpenAI from 'openai';
 
-if (!process.env.OPENAI_API_KEY) {
-  throw new Error('OPENAI_API_KEY is not set in environment variables');
+// Create OpenAI client only when needed (server-side)
+function getOpenAIClient() {
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error('OPENAI_API_KEY is not set in environment variables');
+  }
+  
+  return new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  });
 }
-
-export const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
 
 // Types for AI generation
 export interface ResumeGenerationRequest {
@@ -34,6 +37,8 @@ export interface CoverLetterGenerationRequest {
 // AI-powered resume content generation
 export async function generateResumeContent(request: ResumeGenerationRequest): Promise<string> {
   try {
+    const openai = getOpenAIClient();
+    
     const prompt = `You are an expert resume writer. Create a professional resume summary and experience descriptions based on the following information:
 
 Job Title: ${request.jobTitle}
@@ -70,13 +75,21 @@ Make the content specific, measurable, and tailored to the job. Use action verbs
     return completion.choices[0]?.message?.content || 'Failed to generate content';
   } catch (error) {
     console.error('OpenAI API error:', error);
-    throw new Error('Failed to generate resume content');
+    
+    // Check if it's an environment variable issue
+    if (error instanceof Error && error.message.includes('OPENAI_API_KEY')) {
+      throw new Error('OpenAI API is not configured. Please contact support.');
+    }
+    
+    throw new Error('Failed to generate resume content. Please try again later.');
   }
 }
 
 // AI-powered cover letter generation
 export async function generateCoverLetterContent(request: CoverLetterGenerationRequest): Promise<string> {
   try {
+    const openai = getOpenAIClient();
+    
     const lengthGuide = {
       short: '2-3 paragraphs',
       medium: '3-4 paragraphs', 
@@ -123,6 +136,12 @@ Make it personal, specific to the job, and match the requested tone and length.`
     return completion.choices[0]?.message?.content || 'Failed to generate content';
   } catch (error) {
     console.error('OpenAI API error:', error);
-    throw new Error('Failed to generate cover letter content');
+    
+    // Check if it's an environment variable issue
+    if (error instanceof Error && error.message.includes('OPENAI_API_KEY')) {
+      throw new Error('OpenAI API is not configured. Please contact support.');
+    }
+    
+    throw new Error('Failed to generate cover letter content. Please try again later.');
   }
 }
