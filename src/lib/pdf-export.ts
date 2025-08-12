@@ -42,12 +42,45 @@ interface CoverLetterData {
 // HTML to PDF export function
 export async function exportToPDF(htmlElement: HTMLElement, filename: string = 'document.pdf'): Promise<boolean> {
   try {
-    const canvas = await html2canvas(htmlElement, {
+    // Create a new div element instead of cloning
+    const newDiv = document.createElement('div');
+    newDiv.innerHTML = htmlElement.innerHTML;
+    
+    // Apply basic styling to ensure proper rendering
+    newDiv.style.position = 'absolute';
+    newDiv.style.left = '-9999px';
+    newDiv.style.top = '-9999px';
+    newDiv.style.width = '800px';
+    newDiv.style.backgroundColor = '#ffffff';
+    newDiv.style.fontFamily = 'Arial, sans-serif';
+    newDiv.style.padding = '20px';
+    newDiv.style.margin = '0';
+    
+    // Remove any problematic classes or attributes
+    newDiv.className = '';
+    newDiv.removeAttribute('style');
+    
+    // Temporarily append to body for rendering
+    document.body.appendChild(newDiv);
+
+    const canvas = await html2canvas(newDiv, {
       scale: 2,
       useCORS: true,
       allowTaint: true,
-      backgroundColor: '#ffffff'
+      backgroundColor: '#ffffff',
+      logging: false,
+      removeContainer: true,
+      foreignObjectRendering: false,
+      // Disable features that might cause issues
+      ignoreElements: (element) => {
+        // Ignore elements with problematic CSS
+        const style = window.getComputedStyle(element);
+        return style.color.includes('lab(') || style.backgroundColor.includes('lab(');
+      }
     });
+
+    // Clean up
+    document.body.removeChild(newDiv);
 
     const imgData = canvas.toDataURL('image/png');
     const pdf = new jsPDF('p', 'mm', 'a4');
@@ -86,40 +119,66 @@ export function generateFilename(type: string, name: string): string {
 
 // Resume-specific PDF export
 export async function exportResumeToPDF(resumeData: ResumeData): Promise<boolean> {
-  const filename = generateFilename('Resume', resumeData.personalInfo?.fullName || 'Resume');
-  
-  // Create a temporary HTML element for the resume
-  const tempDiv = document.createElement('div');
-  tempDiv.innerHTML = generateResumeHTML(resumeData);
-  tempDiv.style.position = 'absolute';
-  tempDiv.style.left = '-9999px';
-  tempDiv.style.top = '-9999px';
-  document.body.appendChild(tempDiv);
+  try {
+    const filename = generateFilename('Resume', resumeData.personalInfo?.fullName || 'Resume');
+    
+    // Create a temporary HTML element for the resume
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = generateResumeHTML(resumeData);
+    
+    // Apply styling to the temp div
+    tempDiv.style.position = 'absolute';
+    tempDiv.style.left = '-9999px';
+    tempDiv.style.top = '-9999px';
+    tempDiv.style.width = '800px';
+    tempDiv.style.backgroundColor = '#ffffff';
+    tempDiv.style.fontFamily = 'Arial, sans-serif';
+    tempDiv.style.padding = '20px';
+    tempDiv.style.margin = '0';
+    
+    document.body.appendChild(tempDiv);
 
-  const success = await exportToPDF(tempDiv, filename);
-  document.body.removeChild(tempDiv);
-  
-  return success;
+    const success = await exportToPDF(tempDiv, filename);
+    document.body.removeChild(tempDiv);
+    
+    return success;
+  } catch (error) {
+    console.error('Resume PDF export error:', error);
+    return false;
+  }
 }
 
 // Cover letter-specific PDF export
 export async function exportCoverLetterToPDF(coverLetterData: CoverLetterData): Promise<boolean> {
-  const filename = generateFilename('CoverLetter', coverLetterData.jobTitle || 'CoverLetter');
-  
-  const tempDiv = document.createElement('div');
-  tempDiv.innerHTML = generateCoverLetterHTML(coverLetterData);
-  tempDiv.style.position = 'absolute';
-  tempDiv.style.left = '-9999px';
-  tempDiv.style.top = '-9999px';
-  document.body.appendChild(tempDiv);
+  try {
+    const filename = generateFilename('CoverLetter', coverLetterData.jobTitle || 'CoverLetter');
+    
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = generateCoverLetterHTML(coverLetterData);
+    
+    // Apply styling to the temp div
+    tempDiv.style.position = 'absolute';
+    tempDiv.style.left = '-9999px';
+    tempDiv.style.top = '-9999px';
+    tempDiv.style.width = '800px';
+    tempDiv.style.backgroundColor = '#ffffff';
+    tempDiv.style.fontFamily = 'Arial, sans-serif';
+    tempDiv.style.padding = '20px';
+    tempDiv.style.margin = '0';
+    
+    document.body.appendChild(tempDiv);
 
-  const success = await exportToPDF(tempDiv, filename);
-  document.body.removeChild(tempDiv);
-  
-  return success;
+    const success = await exportToPDF(tempDiv, filename);
+    document.body.removeChild(tempDiv);
+    
+    return success;
+  } catch (error) {
+    console.error('Cover letter PDF export error:', error);
+    return false;
+  }
 }
 
-// Generate HTML for resume
+// Generate HTML for resume with simple, compatible colors
 function generateResumeHTML(resumeData: ResumeData): string {
   const { personalInfo, summary, experience, education, skills } = resumeData;
   
@@ -171,7 +230,7 @@ function generateResumeHTML(resumeData: ResumeData): string {
   `;
 }
 
-// Generate HTML for cover letter
+// Generate HTML for cover letter with simple, compatible colors
 function generateCoverLetterHTML(coverLetterData: CoverLetterData): string {
   const { companyName, content, personalInfo } = coverLetterData;
   

@@ -1,11 +1,5 @@
 import mongoose from 'mongoose';
 
-if (!process.env.MONGODB_URI) {
-  throw new Error('MONGODB_URI is not set in environment variables');
-}
-
-const MONGODB_URI = process.env.MONGODB_URI;
-
 declare global {
   var mongoose: {
     conn: mongoose.Connection | null;
@@ -20,6 +14,13 @@ if (!cached) {
 }
 
 export async function connectToDatabase() {
+  // Check environment variable inside the function
+  if (!process.env.MONGODB_URI) {
+    throw new Error('MONGODB_URI is not set in environment variables');
+  }
+
+  const MONGODB_URI = process.env.MONGODB_URI;
+
   if (cached?.conn) {
     return cached.conn;
   }

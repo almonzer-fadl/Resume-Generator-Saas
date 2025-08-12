@@ -1,44 +1,58 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { connectToDatabase } from '@/lib/mongodb';
-import { Resume } from '@/lib/models/Resume';
+import { generateResumeContent } from '@/lib/openai';
 
 export async function POST(request: NextRequest) {
   try {
-    await connectToDatabase();
-    const body = await request.json();
-    
-    const resume = new Resume(body);
-    await resume.save();
-    
-    return NextResponse.json({ success: true, resume }, { status: 201 });
+    const { jobTitle, jobDescription, userExperience, userSkills, userEducation, userSummary, tone } = await request.json();
+
+    // Only require essential fields
+    if (!jobTitle || !jobDescription) {
+      return NextResponse.json(
+        { error: 'Job title and job description are required' },
+        { status: 400 }
+      );
+    }
+
+    // Set default values for missing fields
+    const aiRequest = {
+      jobTitle,
+      jobDescription,
+      userExperience: userExperience || "General professional experience",
+      userSkills: userSkills || "Professional skills",
+      userEducation: userEducation || "Educational background",
+      userSummary: userSummary || "Professional summary",
+      tone: tone || "professional"
+    };
+
+    // Generate resume content using OpenAI
+    const content = await generateResumeContent(aiRequest);
+
+    return NextResponse.json({ content });
   } catch (error) {
-    console.error('Error creating resume:', error);
+    console.error('Resume generation error:', error);
+    
+    // Check if it's an environment variable issue
+    if (error instanceof Error && error.message.includes('OPENAI_API_KEY')) {
+      return NextResponse.json(
+        { error: 'OpenAI API is not configured. Please contact support.' },
+        { status: 500 }
+      );
+    }
+    
     return NextResponse.json(
-      { success: false, error: 'Failed to create resume' },
+      { error: 'Failed to generate resume content. Please try again later.' },
       { status: 500 }
     );
   }
 }
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
-    await connectToDatabase();
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
-    
-    if (!userId) {
-      return NextResponse.json(
-        { success: false, error: 'User ID required' },
-        { status: 400 }
-      );
-    }
-    
-    const resumes = await Resume.find({ userId }).sort({ updatedAt: -1 });
-    return NextResponse.json({ success: true, resumes });
-  } catch (error) {
-    console.error('Error fetching resumes:', error);
+    // Placeholder for getting resumes
+    return NextResponse.json({ message: 'Resumes endpoint' });
+  } catch {
     return NextResponse.json(
-      { success: false, error: 'Failed to fetch resumes' },
+      { error: 'Failed to fetch resumes' },
       { status: 500 }
     );
   }

@@ -1,18 +1,15 @@
 "use client";
 
 import { useState } from "react";
-// import { useMutation } from "convex/react";
-// import { api } from "@/convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { exportResumeToPDF } from "@/lib/pdf-export";
-import { generateResumeContent, type ResumeGenerationRequest } from "@/lib/openai";
-import { FileText, ArrowLeft, Download } from "lucide-react";
-import Link from "next/link";
 import AuthGuard from "@/components/AuthGuard";
+import { exportResumeToPDF } from "@/lib/pdf-export";
+import { Loader2, Download, Eye, ArrowLeft, Plus, Trash2 } from "lucide-react";
+import Link from "next/link";
 
 export default function ResumeBuilderPage() {
   const [isLoading, setIsLoading] = useState(false);
@@ -233,18 +230,13 @@ export default function ResumeBuilderPage() {
   };
 
   const handleGenerateContent = async () => {
-    if (!formData.personalInfo.firstName || !formData.personalInfo.lastName || !formData.title) {
-      alert("Please fill in your basic information first");
-      return;
-    }
-
     setIsGenerating(true);
     try {
-      const aiRequest: ResumeGenerationRequest = {
-        jobTitle: formData.title,
-        jobDescription: formData.summary || "General professional role",
+      const aiRequest = {
+        jobTitle: formData.title || "",
+        jobDescription: formData.summary || "",
         userExperience: formData.experience.map(exp => 
-          `${exp.position} at ${exp.company}: ${exp.description.join(', ')}`
+          `${exp.position} at ${exp.company} (${exp.startDate} - ${exp.endDate || 'Present'}): ${exp.description.join(', ')}`
         ).join('; '),
         userSkills: formData.skills.join(', '),
         userEducation: formData.education.map(edu => 
@@ -254,18 +246,32 @@ export default function ResumeBuilderPage() {
         tone: "professional" as const
       };
 
-      const generatedContent = await generateResumeContent(aiRequest);
+      // Call the API endpoint instead of the function directly
+      const response = await fetch('/api/resumes', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(aiRequest),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to generate content');
+      }
+
+      const { content } = await response.json();
       
-      if (generatedContent) {
+      if (content) {
         setFormData(prev => ({
           ...prev,
-          summary: generatedContent
+          summary: content
         }));
         setCurrentStep(3); // Move to review step
       }
     } catch (error) {
       console.error("Failed to generate content:", error);
-      alert("Failed to generate content. Please try again.");
+      alert(error instanceof Error ? error.message : "Failed to generate content. Please try again.");
     } finally {
       setIsGenerating(false);
     }
@@ -718,7 +724,7 @@ export default function ResumeBuilderPage() {
                 </Button>
               </Link>
               <div className="flex items-center space-x-2">
-                <FileText className="h-8 w-8 text-blue-600" />
+                <Eye className="h-8 w-8 text-blue-600" />
                 <span className="text-xl font-bold text-gray-900">Resume Builder</span>
               </div>
             </div>

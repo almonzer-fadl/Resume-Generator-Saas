@@ -1,17 +1,14 @@
 "use client";
 
 import { useState } from "react";
-// import { useMutation, useQuery } from "convex/react";
-// import { api } from "@/convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { exportCoverLetterToPDF } from "@/lib/pdf-export";
-import { generateCoverLetterContent, type CoverLetterGenerationRequest } from "@/lib/openai";
-import { Loader2, Download, Sparkles, Save } from "lucide-react";
 import AuthGuard from "@/components/AuthGuard";
+import { exportCoverLetterToPDF } from "@/lib/pdf-export";
+import { Loader2, Download, Eye } from "lucide-react";
 
 // Types for cover letter data
 interface CoverLetterData {
@@ -68,37 +65,46 @@ export default function CoverLetterBuilder() {
   };
 
   const handleGenerateContent = async () => {
-    if (!formData.jobTitle || !formData.companyName || !formData.jobDescription) {
-      alert("Please fill in the job details first");
-      return;
-    }
-
     setIsGenerating(true);
     try {
-      const aiRequest: CoverLetterGenerationRequest = {
-        jobTitle: formData.jobTitle,
-        companyName: formData.companyName,
-        jobDescription: formData.jobDescription,
-        userExperience: formData.userExperience,
-        userSkills: formData.userSkills,
-        userEducation: formData.userEducation,
-        userSummary: formData.userSummary,
-        tone: formData.tone as 'professional' | 'friendly' | 'enthusiastic' | 'confident',
-        length: formData.length as 'short' | 'medium' | 'long'
+      const aiRequest = {
+        jobTitle: formData.jobTitle || "",
+        companyName: formData.companyName || "",
+        jobDescription: formData.jobDescription || "",
+        userExperience: formData.userExperience || "",
+        userSkills: formData.userSkills || "",
+        userEducation: formData.userEducation || "",
+        userSummary: formData.userSummary || "",
+        tone: "professional" as const,
+        length: "medium" as const
       };
 
-      const generatedContent = await generateCoverLetterContent(aiRequest);
+      // Call the API endpoint instead of the function directly
+      const response = await fetch('/api/cover-letters', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(aiRequest),
+      });
 
-      if (generatedContent) {
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to generate content');
+      }
+
+      const { content } = await response.json();
+      
+      if (content) {
         setFormData(prev => ({
           ...prev,
-          content: generatedContent
+          content: content
         }));
         setCurrentStep(3); // Move to review step
       }
     } catch (error) {
       console.error("Failed to generate content:", error);
-      alert("Failed to generate content. Please try again.");
+      alert(error instanceof Error ? error.message : "Failed to generate content. Please try again.");
     } finally {
       setIsGenerating(false);
     }
@@ -325,7 +331,7 @@ export default function CoverLetterBuilder() {
                     </>
                   ) : (
                     <>
-                      <Sparkles className="mr-2 h-4 w-4" />
+                      <Eye className="mr-2 h-4 w-4" />
                       Generate Cover Letter
                     </>
                   )}
@@ -365,7 +371,7 @@ export default function CoverLetterBuilder() {
                       </>
                     ) : (
                       <>
-                        <Save className="mr-2 h-4 w-4" />
+                        <Eye className="mr-2 h-4 w-4" />
                         Save
                       </>
                     )}

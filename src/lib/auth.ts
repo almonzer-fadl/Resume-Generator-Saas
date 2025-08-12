@@ -87,7 +87,7 @@ const handler = NextAuth({
       }
       return session;
     },
-    async signIn({ user, account, profile }) {
+    async signIn({ user, account }) {
       console.log('SignIn callback:', { 
         userId: user.id, 
         email: user.email, 

@@ -4,10 +4,24 @@ import { User } from '@/lib/models/User';
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('=== REGISTRATION API START ===');
     console.log('Registration API called');
     
+    // Test database connection first
+    console.log('Testing database connection...');
+    try {
+      await connectToDatabase();
+      console.log('Database connected successfully');
+    } catch (dbError) {
+      console.error('Database connection failed:', dbError);
+      return NextResponse.json(
+        { error: 'Database connection failed', details: dbError instanceof Error ? dbError.message : 'Unknown DB error' },
+        { status: 500 }
+      );
+    }
+    
     const body = await request.json();
-    console.log('Request body:', { ...body, password: '[REDACTED]' });
+    console.log('Request body received:', { ...body, password: '[REDACTED]' });
     
     const { email, password, name } = body;
 
@@ -36,46 +50,81 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log('Connecting to database...');
-    await connectToDatabase();
-    console.log('Database connected successfully');
+    console.log('All validations passed');
 
     // Check if user already exists
     console.log('Checking for existing user...');
-    const existingUser = await User.findOne({ email: email.toLowerCase() });
-    if (existingUser) {
-      console.log('User already exists:', existingUser.email);
+    try {
+      const existingUser = await User.findOne({ email: email.toLowerCase() });
+      if (existingUser) {
+        console.log('User already exists:', existingUser.email);
+        return NextResponse.json(
+          { error: 'User with this email already exists' },
+          { status: 409 }
+        );
+      }
+      console.log('No existing user found, proceeding with creation');
+    } catch (findError) {
+      console.error('Error checking existing user:', findError);
       return NextResponse.json(
-        { error: 'User with this email already exists' },
-        { status: 409 }
+        { error: 'Error checking existing user', details: findError instanceof Error ? findError.message : 'Unknown error' },
+        { status: 500 }
       );
     }
 
     console.log('Creating new user...');
-    // Create new user
-    const user = new User({
-      email: email.toLowerCase(),
-      password,
-      name,
-    });
+    try {
+      // Create new user
+      const user = new User({
+        email: email.toLowerCase(),
+        password,
+        name,
+      });
 
-    console.log('Saving user to database...');
-    await user.save();
-    console.log('User saved successfully');
+      console.log('User object created, attempting to save...');
+      await user.save();
+      console.log('User saved successfully to database');
 
-    // Return user without password
-    const userResponse = user.toObject();
-    delete userResponse.password;
+      // Return user without password
+      const userResponse = user.toObject();
+      delete userResponse.password;
 
-    console.log('Registration successful for:', userResponse.email);
-    return NextResponse.json(
-      { 
-        message: 'User created successfully',
-        user: userResponse 
-      },
-      { status: 201 }
-    );
+      console.log('Registration successful for:', userResponse.email);
+      console.log('=== REGISTRATION API SUCCESS ===');
+      
+      return NextResponse.json(
+        { 
+          message: 'User created successfully',
+          user: userResponse 
+        },
+        { status: 201 }
+      );
+    } catch (saveError) {
+      console.error('Error saving user:', saveError);
+      
+      // Check for specific MongoDB errors
+      if (saveError instanceof Error) {
+        if (saveError.message.includes('validation failed')) {
+          return NextResponse.json(
+            { error: 'Invalid data provided', details: saveError.message },
+            { status: 400 }
+          );
+        }
+        if (saveError.message.includes('duplicate key')) {
+          return NextResponse.json(
+            { error: 'User with this email already exists' },
+            { status: 409 }
+          );
+        }
+      }
+      
+      return NextResponse.json(
+        { error: 'Failed to save user', details: saveError instanceof Error ? saveError.message : 'Unknown save error' },
+        { status: 500 }
+      );
+    }
   } catch (error) {
+    console.error('=== REGISTRATION API ERROR ===');
     console.error('Registration error details:', error);
     
     // More specific error messages
@@ -89,6 +138,12 @@ export async function POST(request: NextRequest) {
       if (error.message.includes('validation failed')) {
         return NextResponse.json(
           { error: 'Invalid data provided' },
+          { status: 400 }
+        );
+      }
+      if (error.message.includes('JSON')) {
+        return NextResponse.json(
+          { error: 'Invalid JSON in request body' },
           { status: 400 }
         );
       }

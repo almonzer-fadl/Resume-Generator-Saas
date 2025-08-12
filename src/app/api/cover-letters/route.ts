@@ -1,44 +1,60 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { connectToDatabase } from '@/lib/mongodb';
-import { CoverLetter } from '@/lib/models/CoverLetter';
+import { generateCoverLetterContent } from '@/lib/openai';
 
 export async function POST(request: NextRequest) {
   try {
-    await connectToDatabase();
-    const body = await request.json();
-    
-    const coverLetter = new CoverLetter(body);
-    await coverLetter.save();
-    
-    return NextResponse.json({ success: true, coverLetter }, { status: 201 });
+    const { jobTitle, companyName, jobDescription, userExperience, userSkills, userEducation, userSummary, tone, length } = await request.json();
+
+    // Only require essential fields
+    if (!jobTitle || !companyName || !jobDescription) {
+      return NextResponse.json(
+        { error: 'Job title, company name, and job description are required' },
+        { status: 400 }
+      );
+    }
+
+    // Set default values for missing fields
+    const aiRequest = {
+      jobTitle,
+      companyName,
+      jobDescription,
+      userExperience: userExperience || "General professional experience",
+      userSkills: userSkills || "Professional skills",
+      userEducation: userEducation || "Educational background",
+      userSummary: userSummary || "Professional summary",
+      tone: tone || "professional",
+      length: length || "medium"
+    };
+
+    // Generate cover letter content using OpenAI
+    const content = await generateCoverLetterContent(aiRequest);
+
+    return NextResponse.json({ content });
   } catch (error) {
-    console.error('Error creating cover letter:', error);
+    console.error('Cover letter generation error:', error);
+    
+    // Check if it's an environment variable issue
+    if (error instanceof Error && error.message.includes('OPENAI_API_KEY')) {
+      return NextResponse.json(
+        { error: 'OpenAI API is not configured. Please contact support.' },
+        { status: 500 }
+      );
+    }
+    
     return NextResponse.json(
-      { success: false, error: 'Failed to create cover letter' },
+      { error: 'Failed to generate cover letter content. Please try again later.' },
       { status: 500 }
     );
   }
 }
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
-    await connectToDatabase();
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
-    
-    if (!userId) {
-      return NextResponse.json(
-        { success: false, error: 'User ID required' },
-        { status: 400 }
-      );
-    }
-    
-    const coverLetters = await CoverLetter.find({ userId }).sort({ updatedAt: -1 });
-    return NextResponse.json({ success: true, coverLetters });
-  } catch (error) {
-    console.error('Error fetching cover letters:', error);
+    // Placeholder for getting cover letters
+    return NextResponse.json({ message: 'Cover letters endpoint' });
+  } catch {
     return NextResponse.json(
-      { success: false, error: 'Failed to fetch cover letters' },
+      { error: 'Failed to fetch cover letters' },
       { status: 500 }
     );
   }
