@@ -19,6 +19,7 @@ declare module "next-auth" {
 }
 
 const handler = NextAuth({
+  debug: process.env.NODE_ENV === 'development', // Enable debug in development
   adapter: MongoDBAdapter(clientPromise),
   providers: [
     GoogleProvider({
@@ -71,9 +72,12 @@ const handler = NextAuth({
     strategy: "jwt",
   },
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, account }) {
       if (user) {
         token.id = user.id;
+      }
+      if (account) {
+        console.log('JWT callback - Account type:', account.type);
       }
       return token;
     },
@@ -83,9 +87,38 @@ const handler = NextAuth({
       }
       return session;
     },
+    async signIn({ user, account, profile }) {
+      console.log('SignIn callback:', { 
+        userId: user.id, 
+        email: user.email, 
+        provider: account?.provider,
+        type: account?.type 
+      });
+      return true;
+    },
+    async redirect({ url, baseUrl }) {
+      console.log('Redirect callback:', { url, baseUrl });
+      // Allows relative callback URLs
+      if (url.startsWith("/")) return `${baseUrl}${url}`;
+      // Allows callback URLs on the same origin
+      else if (new URL(url).origin === baseUrl) return url;
+      return baseUrl;
+    },
   },
   pages: {
     signIn: "/auth/signin",
+    error: "/auth/signin", // Redirect to signin page on error
+  },
+  events: {
+    async signIn(message) {
+      console.log('SignIn event:', message);
+    },
+    async signOut(message) {
+      console.log('SignOut event:', message);
+    },
+    async createUser(message) {
+      console.log('CreateUser event:', message);
+    },
   },
 });
 

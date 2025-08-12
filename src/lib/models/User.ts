@@ -1,7 +1,25 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 
-const UserSchema = new mongoose.Schema({
+// Define the User interface
+export interface IUser extends mongoose.Document {
+  email: string;
+  password?: string; // Optional since OAuth users won't have passwords
+  name: string;
+  subscriptionPlan: 'free' | 'pro' | 'business';
+  subscriptionStatus: 'active' | 'inactive' | 'cancelled';
+  usage: {
+    resumes: number;
+    coverLetters: number;
+    aiGenerations: number;
+  };
+  createdAt: Date;
+  updatedAt: Date;
+  comparePassword(candidatePassword: string): Promise<boolean>;
+  hasPassword(): boolean;
+}
+
+const UserSchema = new mongoose.Schema<IUser>({
   email: {
     type: String,
     required: true,
@@ -42,6 +60,8 @@ const UserSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+}, {
+  timestamps: true, // This will automatically handle createdAt and updatedAt
 });
 
 // Hash password before saving (only if password is modified)
@@ -57,12 +77,6 @@ UserSchema.pre('save', async function(next) {
   }
 });
 
-// Update timestamp on save
-UserSchema.pre('save', function(next) {
-  this.updatedAt = new Date();
-  next();
-});
-
 // Add password comparison method
 UserSchema.methods.comparePassword = async function(candidatePassword: string): Promise<boolean> {
   if (!this.password) return false; // OAuth users won't have passwords
@@ -74,4 +88,4 @@ UserSchema.methods.hasPassword = function(): boolean {
   return !!this.password;
 };
 
-export const User = mongoose.models.User || mongoose.model('User', UserSchema);
+export const User = mongoose.models.User || mongoose.model<IUser>('User', UserSchema);
