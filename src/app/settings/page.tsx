@@ -6,9 +6,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { FileText, ArrowLeft, Crown, CreditCard, User, Bell } from "lucide-react";
 import Link from "next/link";
-
+import AuthGuard from "@/components/AuthGuard";
 export default function SettingsPage() {
   return (
+    <AuthGuard>
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="bg-white border-b">
@@ -240,5 +241,6 @@ export default function SettingsPage() {
         </div>
       </div>
     </div>
+    </AuthGuard>
   );
 }

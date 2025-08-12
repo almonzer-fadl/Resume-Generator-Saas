@@ -9,11 +9,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { exportResumeToPDF } from "@/lib/pdf-export";
+import { generateResumeContent, type ResumeGenerationRequest } from "@/lib/openai";
 import { FileText, ArrowLeft, Download } from "lucide-react";
 import Link from "next/link";
+import AuthGuard from "@/components/AuthGuard";
 
 export default function ResumeBuilderPage() {
   const [isLoading, setIsLoading] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
   
   // Form state
@@ -229,6 +232,45 @@ export default function ResumeBuilderPage() {
     }
   };
 
+  const handleGenerateContent = async () => {
+    if (!formData.personalInfo.firstName || !formData.personalInfo.lastName || !formData.title) {
+      alert("Please fill in your basic information first");
+      return;
+    }
+
+    setIsGenerating(true);
+    try {
+      const aiRequest: ResumeGenerationRequest = {
+        jobTitle: formData.title,
+        jobDescription: formData.summary || "General professional role",
+        userExperience: formData.experience.map(exp => 
+          `${exp.position} at ${exp.company}: ${exp.description.join(', ')}`
+        ).join('; '),
+        userSkills: formData.skills.join(', '),
+        userEducation: formData.education.map(edu => 
+          `${edu.degree} in ${edu.field} from ${edu.institution}`
+        ).join('; '),
+        userSummary: formData.summary || "",
+        tone: "professional" as const
+      };
+
+      const generatedContent = await generateResumeContent(aiRequest);
+      
+      if (generatedContent) {
+        setFormData(prev => ({
+          ...prev,
+          summary: generatedContent
+        }));
+        setCurrentStep(3); // Move to review step
+      }
+    } catch (error) {
+      console.error("Failed to generate content:", error);
+      alert("Failed to generate content. Please try again.");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   const renderStep1 = () => (
     <div className="space-y-6">
       <Card>
@@ -321,6 +363,9 @@ export default function ResumeBuilderPage() {
             onChange={(e) => handleInputChange("summary", "", e.target.value)}
             rows={4}
           />
+          <Button onClick={handleGenerateContent} disabled={isGenerating}>
+            {isGenerating ? "Generating..." : "Generate Summary"}
+          </Button>
         </CardContent>
       </Card>
       
@@ -593,20 +638,38 @@ export default function ResumeBuilderPage() {
           <CardDescription>Choose a professional template for your resume</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {["modern", "classic", "minimal"].map((template) => (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[
+              { id: "modern", name: "Modern", description: "Clean and contemporary design", color: "blue" },
+              { id: "classic", name: "Classic", description: "Traditional and professional", color: "gray" },
+              { id: "minimal", name: "Minimal", description: "Simple and elegant layout", color: "green" }
+            ].map((template) => (
               <div
-                key={template}
-                className={`border-2 rounded-lg p-4 cursor-pointer transition-colors ${
-                  formData.template === template
-                    ? "border-blue-500 bg-blue-50"
+                key={template.id}
+                className={`border-2 rounded-lg p-6 cursor-pointer transition-all hover:shadow-lg ${
+                  formData.template === template.id
+                    ? `border-${template.color}-500 bg-${template.color}-50`
                     : "border-gray-200 hover:border-gray-300"
                 }`}
-                onClick={() => handleInputChange("template", "", template)}
+                onClick={() => handleInputChange("template", "", template.id)}
               >
-                <div className="text-center">
-                  <div className="w-16 h-20 bg-gray-200 rounded mx-auto mb-2"></div>
-                  <span className="capitalize font-medium">{template}</span>
+                <div className="text-center space-y-3">
+                  {/* Template Preview */}
+                  <div className={`w-20 h-24 mx-auto rounded border-2 ${
+                    template.id === "modern" ? "bg-gradient-to-br from-blue-100 to-blue-200" :
+                    template.id === "classic" ? "bg-gradient-to-br from-gray-100 to-gray-200" :
+                    "bg-gradient-to-br from-green-100 to-green-200"
+                  }`}>
+                    <div className="p-2 space-y-1">
+                      <div className="h-2 bg-white rounded"></div>
+                      <div className="h-1 bg-white rounded w-3/4"></div>
+                      <div className="h-1 bg-white rounded w-1/2"></div>
+                    </div>
+                  </div>
+                  <div>
+                    <span className="font-semibold text-lg capitalize">{template.name}</span>
+                    <p className="text-sm text-gray-600 mt-1">{template.description}</p>
+                  </div>
                 </div>
               </div>
             ))}
@@ -641,6 +704,7 @@ export default function ResumeBuilderPage() {
   ];
 
   return (
+    <AuthGuard>
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="bg-white border-b">
@@ -703,5 +767,6 @@ export default function ResumeBuilderPage() {
         {steps[currentStep - 1].component()}
       </div>
     </div>
+    </AuthGuard>
   );
 }

@@ -1,319 +1,205 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
+import { useSession } from "next-auth/react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, FileText, Mail, Settings, Crown, Download } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { 
+  FileText, 
+  Mail, 
+  TrendingUp, 
+  Users, 
+  Edit
+} from "lucide-react";
 import Link from "next/link";
-
-// Temporary interfaces until database is properly configured
-interface Resume {
-  _id: string;
-  title: string;
-  template: string;
-  experience: string[];
-  skills: string[];
-  updatedAt: string;
-}
-
-interface CoverLetter {
-  _id: string;
-  title: string;
-  template: string;
-  jobTitle: string;
-  companyName: string;
-  createdAt: string;
-}
-
+import AuthGuard from "@/components/AuthGuard";
 export default function DashboardPage() {
-  // Temporary mock data until database is configured
-  const userData: { subscriptionTier: string } = { subscriptionTier: "free" };
-  const resumes: Resume[] = [];
-  const coverLetters: CoverLetter[] = [];
+  const { data: session, status } = useSession();
 
-  const subscriptionTier = userData?.subscriptionTier || "free";
-  const isPro = subscriptionTier === "pro";
+  if (status === "loading") {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!session) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">Access Denied</h1>
+          <p className="text-gray-600 mb-6">Please sign in to access your dashboard.</p>
+          <Link href="/auth/signin">
+            <Button>Sign In</Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
+    <AuthGuard>
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-2">
-              <FileText className="h-8 w-8 text-blue-600" />
-              <span className="text-xl font-bold text-gray-900">Resuletter</span>
-            </div>
-            <div className="flex items-center space-x-4">
-              <Link href="/settings">
-                <Button variant="ghost" size="sm">
-                  <Settings className="h-4 w-4 mr-2" />
-                  Settings
-                </Button>
-              </Link>
-              <div className="flex items-center space-x-2">
-                {isPro ? (
-                  <Crown className="h-4 w-4 text-yellow-500" />
-                ) : null}
-                <span className="text-sm font-medium">
-                  {isPro ? "Pro Plan" : "Free Plan"}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </header>
-
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Welcome Section */}
+        {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Welcome to Resuletter!
-          </h1>
-          <p className="text-gray-600">
-            Manage your resumes, cover letters, and subscription.
-          </p>
+          <h1 className="text-3xl font-bold text-gray-900">Welcome back, {session.user?.name || session.user?.email}!</h1>
+          <p className="text-gray-600 mt-2">Here&apos;s what&apos;s happening with your account today.</p>
+        </div>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Resumes</CardTitle>
+              <FileText className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">0</div>
+              <p className="text-xs text-muted-foreground">
+                +0 from last month
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Cover Letters</CardTitle>
+              <Mail className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">0</div>
+              <p className="text-xs text-muted-foreground">
+                +0 from last month
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">AI Generations</CardTitle>
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">0</div>
+              <p className="text-xs text-muted-foreground">
+                +0 from last month
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Plan</CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <Badge variant="secondary">Free</Badge>
+              <p className="text-xs text-muted-foreground mt-1">
+                Upgrade for more features
+              </p>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-          <Link href="/resume">
-            <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-              <CardHeader className="text-center">
-                <div className="mx-auto w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
-                  <Plus className="h-6 w-6 text-blue-600" />
-                </div>
-                <CardTitle>Create New Resume</CardTitle>
-                <CardDescription>
-                  Build a professional resume with AI-powered content
-                </CardDescription>
-              </CardHeader>
-            </Card>
-          </Link>
-
-          <Link href="/cover-letter">
-            <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-              <CardHeader className="text-center">
-                <div className="mx-auto w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-4">
-                  <Mail className="h-6 w-6 text-green-600" />
-                </div>
-                <CardTitle>Create Cover Letter</CardTitle>
-                <CardDescription>
-                  Generate a personalized cover letter for your job application
-                </CardDescription>
-              </CardHeader>
-            </Card>
-          </Link>
-
-          {!isPro && (
-            <Link href="/pricing">
-              <Card className="hover:shadow-lg transition-shadow cursor-pointer border-2 border-yellow-200">
-                <CardHeader className="text-center">
-                  <div className="mx-auto w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center mb-4">
-                    <Crown className="h-6 w-6 text-yellow-600" />
-                  </div>
-                  <CardTitle>Upgrade to Pro</CardTitle>
-                  <CardDescription>
-                    Get unlimited downloads and premium templates
-                  </CardDescription>
-                </CardHeader>
-              </Card>
-            </Link>
-          )}
-        </div>
-
-        {/* Resumes Section */}
-        <div className="mb-8">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-gray-900">Your Resumes</h2>
-            <Link href="/resume">
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                New Resume
-              </Button>
-            </Link>
-          </div>
-
-          {resumes && resumes.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {resumes.map((resume) => (
-                <Card key={resume._id} className="hover:shadow-lg transition-shadow">
-                  <CardHeader>
-                    <CardTitle className="flex items-center justify-between">
-                      {resume.title}
-                      <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                        {resume.template}
-                      </span>
-                    </CardTitle>
-                    <CardDescription>
-                      Last updated: {new Date(resume.updatedAt).toLocaleDateString()}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      <div className="text-sm text-gray-600">
-                        <strong>Experience:</strong> {resume.experience.length} positions
-                      </div>
-                      <div className="text-sm text-gray-600">
-                        <strong>Skills:</strong> {resume.skills.length} skills
-                      </div>
-                      <div className="flex space-x-2">
-                        <Link href={`/resume/${resume._id}`}>
-                          <Button variant="outline" size="sm" className="w-full">
-                            Edit
-                          </Button>
-                        </Link>
-                        <Button variant="outline" size="sm" className="w-full">
-                          <Download className="h-4 w-4 mr-2" />
-                          Download
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <Card>
-              <CardContent className="text-center py-12">
-                <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No resumes yet</h3>
-                <p className="text-gray-600 mb-4">
-                  Create your first professional resume to get started.
-                </p>
-                <Link href="/resume">
-                  <Button>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Create Resume
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-
-        {/* Cover Letters Section */}
-        <div className="mb-8">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-gray-900">Your Cover Letters</h2>
-            <Link href="/cover-letter">
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                New Cover Letter
-              </Button>
-            </Link>
-          </div>
-
-          {coverLetters && coverLetters.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {coverLetters.map((coverLetter) => (
-                <Card key={coverLetter._id} className="hover:shadow-lg transition-shadow">
-                  <CardHeader>
-                    <CardTitle className="flex items-center justify-between">
-                      {coverLetter.title}
-                      <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
-                        {coverLetter.template}
-                      </span>
-                    </CardTitle>
-                    <CardDescription>
-                      {coverLetter.jobTitle} at {coverLetter.companyName}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      <div className="text-sm text-gray-600">
-                        <strong>Template:</strong> {coverLetter.template}
-                      </div>
-                      <div className="text-sm text-gray-600">
-                        <strong>Created:</strong> {new Date(coverLetter.createdAt).toLocaleDateString()}
-                      </div>
-                      <div className="flex space-x-2">
-                        <Link href={`/cover-letter/${coverLetter._id}`}>
-                          <Button variant="outline" size="sm" className="w-full">
-                            Edit
-                          </Button>
-                        </Link>
-                        <Button variant="outline" size="sm" className="w-full">
-                          <Download className="h-4 w-4 mr-2" />
-                          Download
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <Card>
-              <CardContent className="text-center py-12">
-                <Mail className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No cover letters yet</h3>
-                <p className="text-gray-600 mb-4">
-                  Create your first personalized cover letter to complement your resume.
-                </p>
-                <Link href="/cover-letter">
-                  <Button>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Create Cover Letter
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-
-        {/* Subscription Status */}
-        <div className="mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Subscription Status</h2>
-          <Card className={isPro ? "border-2 border-yellow-200" : ""}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <Card>
             <CardHeader>
-              <CardTitle className="flex items-center">
-                {isPro ? (
-                  <Crown className="h-5 w-5 text-yellow-500 mr-2" />
-                ) : null}
-                {isPro ? "Pro Plan" : "Free Plan"}
+              <CardTitle className="flex items-center space-x-2">
+                <FileText className="h-6 w-6 text-blue-600" />
+                <span>Create Resume</span>
               </CardTitle>
               <CardDescription>
-                {isPro 
-                  ? "You have access to all premium features and unlimited downloads."
-                  : "Upgrade to Pro for unlimited downloads, premium templates, and priority support."
-                }
+                Build a professional resume with our AI-powered builder
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Link href="/resume">
+                <Button className="w-full">
+                  <Edit className="h-4 w-4 mr-2" />
+                  Start Building
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Mail className="h-6 w-6 text-green-600" />
+                <span>Create Cover Letter</span>
+              </CardTitle>
+              <CardDescription>
+                Craft a compelling cover letter for your job applications
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Link href="/cover-letter">
+                <Button className="w-full">
+                  <Edit className="h-4 w-4 mr-2" />
+                  Start Writing
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Recent Activity */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Recent Resumes</CardTitle>
+              <CardDescription>Your latest resume creations</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-8 text-gray-500">
+                <FileText className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                <p>No resumes yet</p>
+                <p className="text-sm">Create your first resume to get started</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Recent Cover Letters</CardTitle>
+              <CardDescription>Your latest cover letter creations</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-8 text-gray-500">
+                <Mail className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                <p>No cover letters yet</p>
+                <p className="text-sm">Create your first cover letter to get started</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Upgrade CTA */}
+        <div className="mt-8">
+          <Card className="bg-gradient-to-r from-blue-600 to-purple-600 text-white">
+            <CardHeader>
+              <CardTitle>Ready to unlock more features?</CardTitle>
+              <CardDescription className="text-blue-100">
+                Upgrade to Pro for unlimited AI generations, premium templates, and priority support.
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Downloads this month:</span>
-                  <span className="text-sm font-medium">
-                    {isPro ? "Unlimited" : "5 remaining"}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Templates available:</span>
-                  <span className="text-sm font-medium">
-                    {isPro ? "All templates" : "3 basic templates"}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Support:</span>
-                  <span className="text-sm font-medium">
-                    {isPro ? "Priority support" : "Community support"}
-                  </span>
-                </div>
-                {!isPro && (
-                  <div className="pt-4">
-                    <Link href="/pricing">
-                      <Button className="w-full">
-                        <Crown className="h-4 w-4 mr-2" />
-                        Upgrade to Pro
-                      </Button>
-                    </Link>
-                  </div>
-                )}
-              </div>
+              <Link href="/pricing">
+                <Button variant="secondary" size="lg">
+                  View Plans
+                </Button>
+              </Link>
             </CardContent>
           </Card>
         </div>
       </div>
     </div>
+    </AuthGuard>
   );
 }

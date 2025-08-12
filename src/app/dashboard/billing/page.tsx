@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Check, CreditCard, Settings, User } from "lucide-react";
 import Link from "next/link";
-
+import AuthGuard from "@/components/AuthGuard";
 // Local subscription plans configuration
 const SUBSCRIPTION_PLANS = {
   free: {
@@ -99,6 +99,7 @@ export default function BillingPage() {
   };
 
   return (
+    <AuthGuard>
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
@@ -246,5 +247,6 @@ export default function BillingPage() {
         </Card>
       </div>
     </div>
+    </AuthGuard>
   );
 }

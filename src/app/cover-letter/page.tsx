@@ -9,7 +9,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { exportCoverLetterToPDF } from "@/lib/pdf-export";
+import { generateCoverLetterContent, type CoverLetterGenerationRequest } from "@/lib/openai";
 import { Loader2, Download, Sparkles, Save } from "lucide-react";
+import AuthGuard from "@/components/AuthGuard";
 
 // Types for cover letter data
 interface CoverLetterData {
@@ -25,17 +27,7 @@ interface CoverLetterData {
   };
 }
 
-interface GenerateContentData {
-  jobTitle: string;
-  companyName: string;
-  jobDescription: string;
-  userExperience: string;
-  userSkills: string;
-  userEducation: string;
-  userSummary: string;
-  tone: string;
-  length: string;
-}
+
 
 export default function CoverLetterBuilder() {
   // TODO: Uncomment when database is properly configured
@@ -48,10 +40,7 @@ export default function CoverLetterBuilder() {
     return { _id: "mock-cover-letter-id" };
   };
   
-  const generateContent = async (data: GenerateContentData) => {
-    console.log("Mock generateContent called with:", data);
-    return "This is a mock generated cover letter content. Please configure database to generate real content.";
-  };
+
   
   const [currentStep, setCurrentStep] = useState(1);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -86,7 +75,7 @@ export default function CoverLetterBuilder() {
 
     setIsGenerating(true);
     try {
-      const generatedContent = await generateContent({
+      const aiRequest: CoverLetterGenerationRequest = {
         jobTitle: formData.jobTitle,
         companyName: formData.companyName,
         jobDescription: formData.jobDescription,
@@ -94,9 +83,11 @@ export default function CoverLetterBuilder() {
         userSkills: formData.userSkills,
         userEducation: formData.userEducation,
         userSummary: formData.userSummary,
-        tone: formData.tone,
-        length: formData.length
-      });
+        tone: formData.tone as 'professional' | 'friendly' | 'enthusiastic' | 'confident',
+        length: formData.length as 'short' | 'medium' | 'long'
+      };
+
+      const generatedContent = await generateCoverLetterContent(aiRequest);
 
       if (generatedContent) {
         setFormData(prev => ({
@@ -161,6 +152,7 @@ export default function CoverLetterBuilder() {
   };
 
   return (
+    <AuthGuard>
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-4xl mx-auto px-4">
         <div className="text-center mb-8">
@@ -389,5 +381,6 @@ export default function CoverLetterBuilder() {
         )}
       </div>
     </div>
+    </AuthGuard>
   );
 }
